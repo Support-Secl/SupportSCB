@@ -4,3 +4,1487 @@ Draft notes for the SupportSCB project.
 - Timeline considerations
 - Key stakeholders identified
 - Next steps outlined
+============================================================================================================================================
+USE [CBRM]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_Lams_Disbrusment_Report_Daily]    Script Date: 3/29/2026 2:25:35 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+ALTER procedure [dbo].[sp_Lams_Disbrusment_Report_Daily](
+	@reportingDate VARCHAR(20),
+	@ouName VARCHAR(20),
+	@optType VARCHAR(10)
+)
+AS
+
+-- =============================================
+-- Author: SCB
+-- Create date: 26-Jan-2017
+-- Modify date: 26-Jan-2017
+-- Description: This SP is modified by adiat
+-- =============================================
+
+-- select * from LamsDisbrusmentFinalData where reportingDate ='2026-02-08'
+-- delete from DisbrusmentFinalData
+			---------------------------------------------------
+-- OPTTYPE 1 Ã¢â€ â€™ Matching records between WORKING & Disbursement
+-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-24','','1'   -- OPTTYPE 1 Ã¢â€ â€™ Matching records between WORKING & Disbursement
+-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-24','','2'    --OPTTYPE 2 Accounts present in RLS working data but missing in the disbursement upload (un-uploaded/pending disbursements).
+-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-24','','3'  -- -- OPTTYPE 3 Accounts present in the disbursement upload but missing in the RLS working data (extra/unlinked disbursements).
+-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-24','','4'   --- CATEGORY WISE EBBS WORKING DATA 
+-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-24','','5'   ---- ---STAFF PL  317
+-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-24','','5'   ---- ---STAFF WITHOUT PL-- 881
+-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-24','','6' 
+---------------------------------------------------
+
+	DECLARE @month INT;
+	DECLARE @year INT;
+	DECLARE @startDtOfRptMonth datetime
+
+	SET @month=MONTH(@reportingDate)
+	SET @year=YEAR(@reportingDate)
+
+	SET @startDtOfRptMonth=DATEFROMPARTS(@year, @month, 1)
+	--SET @reportingDate='2025-10-31'	
+
+	DECLARE @prvImportDate datetime
+
+    SELECT @prvImportDate = MAX(importDate)
+    FROM LamsDisDataBddb2Daily
+    WHERE importDate < @reportingDate
+
+
+BEGIN
+
+SET NOCOUNT ON;
+	IF NOT EXISTS (	SELECT 1 FROM LamsDisDataBddb2Daily	WHERE importDate = @reportingDate)
+ 
+	BEGIN
+		INSERT INTO [dbo].[LamsDisDataBddb2Daily]
+				([BrCode]
+				,[Master]
+				,[CustomerName]
+				,[LoanAccNo]
+				,[cbrmAccountNo]
+				,[OpenDate]
+				,[ExpiryDate]
+				,[fdMaturityDate]
+				,[CurrencyCode]
+				,[LedgerBalance]
+				,[LedgerBalanceFlag]
+				,[BalanceInBDT]
+				,[BalanceInBDTFlag]
+				,[RealBalance]
+				,[RealBalanceFlag]
+				,[SanctionLimit]
+				,[SanctionLimitFlag]
+				,[Segment]
+				,[ouSegmentCode]
+				,[ProductCode]
+				,[DrIntRate]
+				,[CrIntRate]
+				,[StafFlag]
+				,[DormantFlag]
+				,[InterestSuspenseFlag]
+				,[InterestCategoryType]
+				,[AccruedInterest]
+				,[TransactionAccount]
+				,[FTPRate]
+				,[RelationshiptNo]
+				,[aclas]
+				,[crIndicator]
+				,[drIndicator]
+				,[nextDate]
+				,[lnFdTerm]
+				,[crInterestDue]
+				,[drInterestAccountNo]
+				,[crInterestAccountNo]
+				,[isValidRow]
+				,[month]
+				,[year]
+				,[importId]
+				,[status]
+				,[createdOn]
+				,[createdBy]
+				,[editedOn]
+				,[editedBy]
+				,[ouName]
+				,[importDate])
+    
+		SELECT [BrCode]
+			,[Master]
+			,[CustomerName]
+			,[LoanAccNo]
+			,[cbrmAccountNo]
+			,[OpenDate]
+			,[ExpiryDate]
+			,[fdMaturityDate]
+			,[CurrencyCode]
+			,[LedgerBalance]
+			,[LedgerBalanceFlag]
+			,[BalanceInBDT]
+			,[BalanceInBDTFlag]
+			,[RealBalance]
+			,[RealBalanceFlag]
+			,[SanctionLimit]
+			,[SanctionLimitFlag]
+			,[Segment]
+			,[ouSegmentCode]
+			,[ProductCode]
+			,[DrIntRate]
+			,[CrIntRate]
+			,[StafFlag]
+			,[DormantFlag]
+			,[InterestSuspenseFlag]
+			,[InterestCategoryType]
+			,[AccruedInterest]
+			,[TransactionAccount]
+			,[FTPRate]
+			,[RelationshiptNo]
+			,[aclas]
+			,[crIndicator]
+			,[drIndicator]
+			,[nextDate]
+			,[lnFdTerm]
+			,[crInterestDue]
+			,[drInterestAccountNo]
+			,[crInterestAccountNo]
+			,[isValidRow]
+			,[month]
+			,[year]
+			,[importId]
+			,[status]
+			,[createdOn]
+			,[createdBy]
+			,[editedOn]
+			,[editedBy]
+			,[ouName]
+			,[importDate]
+		FROM [dbo].[ImpLamsEbbsBddb2Daily]
+
+		-- KEEP ONLY LAST 2 DAYS DATA
+        DELETE FROM LamsDisDataBddb2Daily
+        WHERE importDate NOT IN
+        (
+            SELECT DISTINCT TOP 2 importDate
+            FROM LamsDisDataBddb2Daily
+            ORDER BY importDate DESC)
+	END 
+
+END
+
+
+---STEP:1 Create EBBS (WORKING data)
+---STEP:2 Create RLS (WORKING data)
+---STEP:3 DISVARSMENT CSV UPLOADED (WORKING data)
+---STEP:4 PL WORKING DATA PREPARATION 
+
+
+                              --- STEP:1 Create EBBS (WORKING data)
+
+SELECT * INTO #EBBSDATA FROM(
+
+SELECT DISTINCT                                  ---------------------NEW LOAN DATA, NEW LOAN IN REPORTING DATE BUT NOT IN PRV-MONTHEND DATE 
+		b.customerName,
+		b.LoanAccNo AS loanAccountNo,
+		b.cbrmAccountNo,
+		b.Master,
+		b.BrCode,
+		b.Segment,
+		b.ProductCode AS productCode,
+		B.CurrencyCode,
+		B.CrIntRate,
+		CAST(D.SanctionLimit AS FLOAT)/100 AS OLD_LIMIT,
+		CAST(B.SanctionLimit AS FLOAT)/100 AS NEW_LIMIT,
+		'NEW LOAN' AS CATEGORY
+		FROM ImpLamsEbbsBddb2Daily B
+		LEFT JOIN LamsDisDataBddb2Daily D ON B.cbrmAccountNo=D.cbrmAccountNo AND D.importDate=@prvImportDate
+		WHERE B.importDate=@reportingDate
+		  AND D.LoanAccNo IS NULL
+		  AND B.ProductCode IN ('350','357','359','360','001','459','924')
+		  AND B.Segment IN ('01','07','12','11')
+		  AND CAST(B.SanctionLimit AS FLOAT)/100>0
+		--1,7,12
+
+UNION ALL
+
+SELECT DISTINCT                               ---------------------HAVING SANCTION LIMIT IN RPT-DATE BUT HAVING 0 SANCTION LIMIT IN PRV-MONTHEND DATE 
+		b.customerName,
+		b.LoanAccNo AS loanAccountNo,
+		b.cbrmAccountNo,
+		b.Master,
+		b.BrCode,
+		b.Segment,
+		b.ProductCode AS productCode,
+		B.CurrencyCode,
+		B.CrIntRate,
+		CAST(D.SanctionLimit AS FLOAT)/100 AS OLD_LIMIT,
+		CAST(B.SanctionLimit AS FLOAT)/100 AS NEW_LIMIT,
+		'HAVING SANCTION RPT DATE BUT 0 IN PRV' AS CATEGORY
+		FROM ImpLamsEbbsBddb2Daily B
+		INNER JOIN LamsDisDataBddb2Daily D ON B.cbrmAccountNo=D.cbrmAccountNo AND D.importDate=@prvImportDate
+		WHERE B.importDate=@reportingDate
+		  AND CAST(D.SanctionLimit AS FLOAT)/100=0 AND CAST(B.SanctionLimit AS FLOAT)/100>0
+		  AND B.ProductCode IN ('350','357','359','360','001','459','924')		
+		  AND B.Segment IN ('01','07','12','11')
+ 
+ UNION ALL
+
+SELECT DISTINCT                 ---------------------HAVING BALANCE BUT NOT MATCH WITH REPORTING DATE AND PRV-MONTHEND DATE
+		b.customerName,
+		b.LoanAccNo AS loanAccountNo,
+		b.cbrmAccountNo,
+		b.Master,
+		b.BrCode,
+		b.Segment,
+		b.ProductCode AS productCode,
+		B.CurrencyCode,
+		B.CrIntRate,
+		CAST(D.SanctionLimit AS FLOAT)/100 AS OLD_LIMIT,
+		CAST(B.SanctionLimit AS FLOAT)/100 AS NEW_LIMIT,
+		'BALANCE NOT MATCH' AS CATEGORY
+		FROM ImpLamsEbbsBddb2Daily B
+		INNER JOIN LamsDisDataBddb2Daily D ON B.cbrmAccountNo=D.cbrmAccountNo AND D.importDate=@prvImportDate
+		WHERE B.importDate=@reportingDate
+		  AND CAST(D.SanctionLimit AS FLOAT)/100 <> CAST(B.SanctionLimit AS FLOAT)/100
+		  AND CAST(B.SanctionLimit AS FLOAT)/100 > 0
+		  AND B.ProductCode IN ('350','357','359','360','001','459','924')
+		  AND B.Segment IN ('01','07','12','11')
+
+UNION ALL
+
+SELECT DISTINCT                    ---------------------HAVING EXPAIRY DATE BUT NOT MATCH WITH REPORTING DATE AND PRV-MONTHEND DATE
+		b.customerName,
+		b.LoanAccNo AS loanAccountNo,
+		b.cbrmAccountNo,
+		b.Master,
+		b.BrCode,
+		b.Segment,
+		b.ProductCode AS productCode,
+		B.CurrencyCode,
+		B.CrIntRate,
+		CAST(D.SanctionLimit AS FLOAT)/100 AS OLD_LIMIT,
+		CAST(B.SanctionLimit AS FLOAT)/100 AS NEW_LIMIT,
+		'EXPAIRY DATE CHANGE' AS CATEGORY
+		FROM ImpLamsEbbsBddb2Daily B
+		INNER JOIN LamsDisDataBddb2Daily D ON B.cbrmAccountNo=D.cbrmAccountNo AND D.importDate=@prvImportDate
+		WHERE B.importDate=@reportingDate
+		  AND CAST(dbo.fn_getExpiryDate(B.ExpiryDate) AS DATE)<>CAST(dbo.fn_getExpiryDate(D.ExpiryDate) AS DATE)
+		  AND CAST(B.SanctionLimit AS FLOAT)/100 > 0
+		  AND B.ProductCode IN ('350','357','359','360','001','459','924')
+		  AND B.Segment IN ('01','07','12','11')
+
+		  --if 001 6 tarik nai 7 tarikh limit ase,
+          --if chance limit between 7 and 8 then come
+	)M
+
+
+	----STEP:2 Create RLS (WORKING data)
+	SELECT
+		* INTO #WORKING
+	FROM ImpLamsRlsRegulatoryDaily r
+	INNER JOIN (
+		SELECT 
+			t.[custName     ],
+			RIGHT('0000000000'+t.[loanAcctNo   ],11) AS accNo,
+			t.[disAmt1      ] AS disAmnt	
+		FROM ImpLamsRlsCrb720C1 t            
+	) m ON m.accNo = r.loanAccountNo
+	WHERE R.importDate=@reportingDate
+
+
+		--SELECTING DISVARSMENT CSV UPLOADED DATA FOR RLS & EBBS
+		--STEP:3 DISVARSMENT CSV UPLOADED (WORKING data)
+
+	SELECT  
+			 D.ProcessorName
+			,D.SalesChannel
+			,D.DisDate
+			,D.FacilityType
+			,D.LLID
+			,D.FacilityNoLOAN
+			,D.LoanCategory
+			,D.LinkAccNo
+			,RIGHT('0000000000' + dbo.fn_ExtractNumbers(TRIM(ISNULL(NULLIF(D.FullAccNo, ''), ''))), 11) AS FullAccNo
+			,D.SanctionLimit
+			,D.LastSanctionLimit
+			,D.NetAmount
+			,D.CustomerName
+			,D.SalesPerson
+			,D.ReferralCode
+			,D.Banca
+			,D.GrossAmount
+			,D.PoBenificiary
+			,D.Remarks INTO #UPLDISDATA
+	FROM ImpConDisbursementDaily D 
+	WHERE D.importDate=@reportingDate 
+
+---STEP:4 PL WORKING DATA PREPARATION 
+
+	SELECT
+			PL.ProcessorName           AS  SlNo_Processor,
+			PL.BranchOrVCReceivedFrom  AS  Sales_Channel_Name,
+			PL.DisbDate                AS  Report_Date,
+			PL.FacilityType            AS  Facility_Type,
+			PL.llid                    AS  Loan_Appl_Id,
+			PL.facilityNo              AS  Facility_RefNo,
+			CASE 
+				WHEN RLS.topupAmount >0  THEN 'Top Up' ELSE PL.Category 
+			END AS Loan_Category,
+			CASE 
+				WHEN BD.TransactionAccount IS NOT NULL 
+				THEN 
+					LEFT(BD.TransactionAccount,2) + '-' +
+					SUBSTRING(BD.TransactionAccount,3,7) + '-' +
+					RIGHT(BD.TransactionAccount,2)
+				ELSE NULL
+			END AS TXN_ACCT_No,
+			PL.loanAccountNo           AS  Full_ACCT_No,
+			COALESCE(CAST(RLS.sanctionLimit AS FLOAT), 0)               AS New_Loan_Limit,
+			0                                                           AS Old_Loan_Limit,
+			CAST(REPLACE(pl.NetDisbursed, ',', '') AS DECIMAL(18,2))  AS Net_Disb_Amount,
+			RLS.customerName           AS  Applicant_Customer_Name,
+			PL.SalesPerson             AS  Sales_Person_Code, -------REMARKS
+			PL.ReferralCode            AS  Referral_Code,
+			PL.BancaAmount             AS  Banca_Ins,
+			DT.openDate                AS [1st_Disb_Date],
+			PL.POBeneficiary           AS PO_Beneficiary,	
+			0                          AS Chck_Loan_Type,
+			--CAST(RLS.sanctionLimit AS FLOAT)-NetDisbursed                        AS Chck_Loan_Type,   --FORMULA, LIMIT-NET_DISBURSE, LIMIT=CRB78C1
+			PL.LoanAccountNo           AS  Link_ACCT_No, ---7 DIGIT WITHOUT 0
+			RLS.productName            AS  Product_Name_Mapped,
+			RLS.loanAccountNo          AS  Loan_ACCT_No,-----11 DIGIT 
+			@reportingDate             AS  Disb_Date,----REMARKS
+			RLS.loanInterestRate       AS  Int_Rate,
+			SEG.remarksBDWMIS          AS  Segment,
+			PL.NF2FMarking             AS  NF2FProduct,
+			RLS.productCode            AS productCode
+
+	INTO  #WORKING_PLDATA
+	FROM ImpConDisbursementPlDaily PL
+	LEFT JOIN ImpLamsRlsRegulatoryDaily RLS ON RIGHT('00000000000' + PL.LoanAccountNo, 11)=RIGHT('00000000000' + RLS.loanAccountNo, 11) AND RLS.importDate=@reportingDate
+	LEFT JOIN ImpConDisbursementSegmentDaily SEG  ON RIGHT('00000000000' + PL.LoanAccountNo, 11)=RIGHT('00000000000' + SEG.typeBDWMIS, 11) AND SEG.importDate=@reportingDate
+	LEFT JOIN ImpConDisbursementFirstDateDaily DT ON RIGHT('00000000000' + PL.LoanAccountNo, 11)=RIGHT('00000000000' + DT.fullAccNo, 11) AND DT.importDate=@reportingDate 
+	LEFT JOIN ImpLamsEbbsBddb2Daily BD ON RIGHT('00000000000' + PL.LoanAccountNo, 11)=RIGHT('00000000000' + BD.LoanAccNo, 11) AND BD.importDate=@reportingDate
+
+	WHERE PL.importDate=@reportingDate 
+
+	--SELECT TOP 1 * FROM ImpLamsRlsRegulatoryDaily RLS 
+	--SELECT TOP 1 * FROM ImpConDisbursementSegmentDaily SEG 
+	--SELECT TOP 1 * FROM ImpConDisbursementFirstDateDaily DT
+
+
+SELECT * INTO #RESULT_DATA FROM(
+		
+		SELECT -----------RLS_WORKING
+			COALESCE(t.ProcessorName, '')           AS [SlNo_Processor],	
+			COALESCE(t.salesChannel, '')            AS [Sales_Channel_Name],
+			COALESCE(t.disDate, '')                 AS [Report_Date],
+			COALESCE(t.FacilityType, '')            AS [Facility_Type],
+			COALESCE(t.llid, '')                    AS [Loan_Appl_Id],
+			COALESCE(t.facilityNoLOAN, '')          AS [Facility_RefNo],
+			COALESCE(t.loanCategory, '')            AS [Loan_Category],------------------------------------------------
+			COALESCE(t.LinkAccNo, '')               AS [TXN_ACCT_No],
+			COALESCE(w.loanAccountNo, '')           AS [Full_ACCT_No],
+			COALESCE(CAST(w.sanctionLimit AS FLOAT), 0)            AS [New_Loan_Limit],
+			COALESCE(CAST(t.lastSanctionLimit AS FLOAT), 0)        AS [Old_Loan_Limit],
+			COALESCE(CAST(t.netAmount AS FLOAT), 0)               AS [Net_Disb_Amount],
+			COALESCE(t.customerName, '')            AS [Applicant_Customer_Name],
+			COALESCE(t.salesPerson, '')             AS [Sales_Person_Code],
+			COALESCE(t.referralCode, '')            AS [Referral_Code],
+			COALESCE(t.banca, '')                   AS [Banca_Ins],
+			DT.openDate AS [1st_Disb_Date],
+			COALESCE(t.poBenificiary, '')           AS [PO_Beneficiary],
+			CAST(REPLACE(W.sanctionLimit, ',', '') AS FLOAT) - CAST(REPLACE(T.netAmount, ',', '') AS FLOAT) AS [Chck_Loan_Type],
+			COALESCE(w.loanAccountNo, '')           AS [Link_ACCT_No],
+			COALESCE(w.productCode, '')             AS [Product_Name_Mapped],
+			COALESCE(w.loanAccountNo, '')           AS [Loan_ACCT_No],
+			COALESCE(t.disDate, '')                 AS [Disb_Date],
+			COALESCE(w.loanInterestRate, '')        AS [Int_Rate],
+			w.segmentCode                           AS Segment,
+            ''                                      AS NF2FProduct,
+            w.productCode                           AS ProductCode,
+			COALESCE(t.remarks, '')                 AS [Remarks]
+		FROM #WORKING W
+		INNER JOIN #UPLDISDATA T ON W.loanAccountNo = T.FullAccNo 
+		LEFT JOIN ImpConDisbursementFirstDateDaily DT ON RIGHT('00000000000' + W.LoanAccountNo, 11)=RIGHT('00000000000' + DT.fullAccNo, 11) AND DT.importDate=@reportingDate 
+	UNION ALL
+
+	SELECT
+			COALESCE(t.ProcessorName, '')                  AS [SlNo_Processor],	
+			COALESCE(t.salesChannel, '')                   AS [Sales_Channel_Name],
+			COALESCE(t.disDate, '')                        AS [Report_Date],
+			COALESCE(t.FacilityType, '')                   AS [Facility_Type],
+			COALESCE(t.llid, '')                           AS [Loan_Appl_Id],
+			COALESCE(t.facilityNoLOAN, '')                 AS [Facility_RefNo],
+			COALESCE(t.loanCategory, '')                   AS [Loan_Category],
+			COALESCE(t.LinkAccNo, '')                      AS [TXN_ACCT_No],
+			COALESCE(w.loanAccountNo, '')                  AS [Full_ACCT_No],
+			COALESCE(CAST(w.NEW_LIMIT AS FLOAT), 0)               AS [New_Loan_Limit],
+			COALESCE(CAST(t.lastSanctionLimit AS FLOAT), 0)        AS [Old_Loan_Limit],
+			COALESCE(CAST(t.netAmount AS FLOAT), 0)               AS [Net_Disb_Amount],
+			COALESCE(t.customerName, '')            AS [Applicant_Customer_Name],
+			COALESCE(t.salesPerson, '')             AS [Sales_Person_Code],
+			COALESCE(t.referralCode, '')            AS [Referral_Code],
+			COALESCE(t.banca, '')                   AS [Banca_Ins],---1ST DIS
+			DT.openDate AS [1st_Disb_Date],
+			COALESCE(t.poBenificiary, '')           AS [PO_Beneficiary],
+			CAST(REPLACE(W.NEW_LIMIT, ',', '') AS FLOAT) - CAST(REPLACE(T.netAmount, ',', '') AS FLOAT) AS [Chck_Loan_Type],
+			COALESCE(w.loanAccountNo, '')           AS [Link_ACCT_No],
+			COALESCE(w.productCode, '')             AS [Product_Name_Mapped],
+			COALESCE(w.loanAccountNo, '')           AS [Loan_ACCT_No],
+			COALESCE(t.disDate, '')                 AS [Disb_Date],
+			W.CrIntRate                             AS [Int_Rate],--Segment,NF2FProduct
+			w.Segment                               AS Segment,
+            ''                                      AS NF2FProduct,
+            w.productCode                           AS ProductCode,
+			COALESCE(t.remarks, '')                 AS [Remarks]
+		FROM #EBBSDATA W
+		INNER JOIN #UPLDISDATA T ON LEFT(W.loanAccountNo,11) = T.FullAccNo 
+		LEFT JOIN ImpConDisbursementFirstDateDaily DT ON RIGHT('00000000000' + W.LoanAccountNo, 11)=RIGHT('00000000000' + DT.fullAccNo, 11) AND DT.importDate=@reportingDate 
+
+--EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','1'
+
+	UNION ALL
+
+	SELECT
+			[SlNo_Processor],	
+            [Sales_Channel_Name],
+            [Report_Date],
+            [Facility_Type],
+            [Loan_Appl_Id],
+            [Facility_RefNo],
+            [Loan_Category],
+            [TXN_ACCT_No],
+            [Full_ACCT_No],
+            [New_Loan_Limit],
+            [Old_Loan_Limit],
+            [Net_Disb_Amount],
+            [Applicant_Customer_Name],
+            [Sales_Person_Code],
+            [Referral_Code],
+            [Banca_Ins],
+            [1st_Disb_Date],
+            [PO_Beneficiary],
+            [Chck_Loan_Type],
+            [Link_ACCT_No],
+            [Product_Name_Mapped],
+            [Loan_ACCT_No],
+            [Disb_Date],
+            [Int_Rate],
+            Segment,
+            NF2FProduct,
+            ProductCode,
+            '' AS [Remarks]
+		FROM #WORKING_PLDATA W
+)W
+				---------------------------------------------------
+
+ IF(@reportingDate=@reportingDate)
+ BEGIN
+
+DELETE
+    FROM [CBRM].[dbo].[LamsDisbrusmentFinalData]
+    WHERE reportingDate = @reportingDate;
+
+    -- INSERT + RETURN SAME DATA
+	INSERT INTO [CBRM].[dbo].[LamsDisbrusmentFinalData]
+	(
+		processorName,
+		salesChannel,
+		reportDate,
+		facilityType,
+		llid,
+		facilityNoLOAN,
+		loanCategory,
+		linkAccNo,
+		fullAccNo,
+		newLoanLimit,
+		oldLoanLimit,
+		netAmount,
+		customerName,
+		salesPerson,
+		referralCode,
+		banca,
+		firstDisDate,
+		poBenificary,
+		checkLoanType,
+		productName,         
+		loanAccNo,
+		disDate,
+		interestRate,
+		segment,
+		NF2FProduct,
+		productCode,
+		remarks,
+		reportingDate,
+		ouName
+	)
+	SELECT 
+		R.[SlNo_Processor],
+		R.[Sales_Channel_Name],
+		CAST(R.[Report_Date] AS date),
+		CASE 
+			WHEN R.ProductCode IN ('359','360') THEN 'GIL'
+			ELSE R.[Facility_Type]
+		END,
+
+		R.[Loan_Appl_Id],
+		R.[Facility_RefNo],
+
+		CASE
+			WHEN REPLACE(REPLACE(UPPER(LTRIM(RTRIM(R.Loan_Category))), '-', ''), ' ', '') = 'TOPUP'
+				THEN 'Top Up'
+			WHEN UPPER(LTRIM(RTRIM(R.Loan_Category))) LIKE 'NEW%'
+				THEN 'New Loan'
+			ELSE R.Loan_Category
+		END,
+
+		R.[TXN_ACCT_No],
+		R.[Full_ACCT_No],
+		CAST(R.[New_Loan_Limit] AS FLOAT),
+		CAST(R.[Old_Loan_Limit] AS FLOAT),
+		CAST(R.[Net_Disb_Amount] AS FLOAT),
+		R.[Applicant_Customer_Name],
+		R.[Sales_Person_Code],
+		R.[Referral_Code],
+		R.[Banca_Ins],
+		ISNULL([1st_Disb_Date], '') AS [1st_Disb_Date],
+		R.[PO_Beneficiary],
+		CAST(R.[Chck_Loan_Type] AS FLOAT),
+		--P.productName,
+		CASE 
+			WHEN P.productName LIKE '%Islamic Home Finance%' THEN 'Saadiq Home Finance' ELSE P.productName
+		END AS productName,
+		R.[Loan_ACCT_No],
+		R.Disb_Date,
+		R.[Int_Rate],
+		R.Segment,
+		CASE 
+			WHEN UPPER(R.NF2FProduct) LIKE '%NF2F%' THEN 'NF2F'
+			WHEN UPPER(R.NF2FProduct) LIKE '%VIOUS%' THEN 'Standard'
+			ELSE R.NF2FProduct
+		END AS NF2FProduct,
+		R.ProductCode,
+		R.[Remarks],
+		@reportingDate,
+		@ouName
+
+	FROM #RESULT_DATA R
+	LEFT JOIN CBRM.dbo.Product P  ON R.ProductCode = P.productCode
+
+END
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-03-04','','1'
+
+IF @optType = '1'
+	BEGIN
+		SELECT DISTINCT
+			 processorName            AS [SlNo_Processor]
+			,salesChannel             AS [Sales_Channel_Name]
+			,reportDate               AS [Report_Date]
+			,facilityType             AS [Facility_Type]
+			,llid                     AS [Loan_Appl_Id]
+			,facilityNoLOAN           AS [Facility_RefNo]
+
+			,CASE
+				WHEN REPLACE(REPLACE(UPPER(LTRIM(RTRIM(loanCategory))), '-', ''), ' ', '') = 'TOPUP'
+					THEN 'Top Up'
+				WHEN UPPER(LTRIM(RTRIM(loanCategory))) LIKE 'NEW%'
+					THEN 'New Loan'
+				ELSE loanCategory
+			 END                      AS [Loan_Category]
+
+			,linkAccNo                AS [TXN_ACCT_No]
+			,loanAccNo                AS [Full_ACCT_No]
+			,newLoanLimit             AS [New_Loan_Limit]
+			,oldLoanLimit             AS [Old_Loan_Limit]
+			,netAmount                AS [Net_Disb_Amount]
+			,customerName             AS [Applicant_Customer_Name]
+			,salesPerson              AS [Sales_Person_Code]
+			,referralCode             AS [Referral_Code]
+			,banca                    AS [Banca_Ins]
+			,firstDisDate             AS [1st_Disb_Date]
+			,poBenificary             AS [PO_Beneficiary]
+			,checkLoanType            AS [Chck_Loan_Type]
+			,linkAccNo                AS [Link_ACCT_No]
+			,productName              AS [Product_Name_Mapped]
+			,loanAccNo                AS [Loan_ACCT_No]
+			,disDate                  AS [Disb_Date]
+			,interestRate             AS [Int_Rate]
+			,segment
+			,NF2FProduct
+			,productCode
+			,remarks
+			,CASE 
+				WHEN productCode IS NULL 
+					 OR LTRIM(RTRIM(productCode)) = ''
+					THEN 'Not Found in System File'
+				ELSE 'Matched with Upload'
+			 END AS Findings
+		FROM [CBRM].[dbo].[LamsDisbrusmentFinalData]
+		where reportingDate= @reportingDate ORDER BY reportDate
+	END
+
+
+	---------------------------------------------------
+	-- OPTTYPE 2 
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-28','','1'
+	---------------------------------------------------
+	--ELSE IF @optType = '2'
+	--BEGIN
+	--	SELECT w.*
+	--	FROM #WORKING w
+	--	LEFT JOIN #UPLDISDATA d ON w.loanAccountNo = D.FullAccNo
+	--	WHERE d.FullAccNo IS NULL;
+	--END
+
+	 --  EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-03-28','','2'
+	 ELSE IF @optType = '2'
+		BEGIN
+
+		--------------------------------------------------
+		-- SYSTEM SIDE (WORKING + EBBS)
+		--------------------------------------------------
+		;WITH SYS AS
+		(
+			SELECT 
+				RIGHT('00000000000' + loanAccountNo,11) AS NormAcc,
+				customerName,
+				productCode,
+				'RLS' as System_File
+			FROM #WORKING
+
+			UNION
+
+			SELECT 
+				RIGHT('00000000000' + w.loanAccountNo,11),
+				w.customerName,
+				w.productCode,
+				'EBBS' as System_File
+			FROM #EBBSDATA W 
+		--	INNER JOIN #UPLDISDATA T ON LEFT(W.loanAccountNo,11) = T.FullAccNo 
+			--LEFT JOIN ImpConDisbursementFirstDateDaily DT ON RIGHT('00000000000' + W.LoanAccountNo, 11)=RIGHT('00000000000' + DT.fullAccNo, 11) AND DT.importDate='2026-02-24'
+
+		),
+
+		--------------------------------------------------
+		-- UPLOAD SIDE (UPLDISDATA + PLDATA)
+		--------------------------------------------------
+		UPLOAD AS
+		(
+			SELECT 
+				RIGHT('00000000000' + FullAccNo,11) AS NormAcc,
+				CustomerName,
+				FacilityType
+			FROM #UPLDISDATA
+
+			UNION
+
+			SELECT 
+				RIGHT('00000000000' + [Full_ACCT_No],11),
+				Applicant_Customer_Name,
+				Facility_Type
+			FROM #WORKING_PLDATA
+		)
+
+		--------------------------------------------------
+		-- SYSTEM BUT NOT IN UPLOAD
+		--------------------------------------------------
+		SELECT 
+			'IN SYSTEM BUT NOT IN UPLOAD' AS Findings,
+			S.NormAcc AS AccountNo,
+			S.NormAcc AS System_Account,
+			S.customerName AS System_Name,
+			S.productCode AS System_Product,
+			S.System_File,
+			NULL AS Upload_Account,
+			NULL AS Upload_Name,
+			NULL AS Upload_Facility
+		FROM SYS S
+		WHERE NOT EXISTS
+		(
+			SELECT 1 
+			FROM UPLOAD U 
+			WHERE U.NormAcc = S.NormAcc
+		)
+
+		UNION ALL
+
+		--------------------------------------------------
+		-- UPLOAD BUT NOT IN SYSTEM
+		--------------------------------------------------
+		SELECT 
+			'IN UPLOAD BUT NOT IN SYSTEM',
+			U.NormAcc,
+			NULL,
+			NULL,
+			NULL,
+			'UPLOAD',
+			U.NormAcc,
+			U.CustomerName,
+			U.FacilityType
+		FROM UPLOAD U
+		WHERE NOT EXISTS
+		(
+			SELECT 1 
+			FROM SYS S 
+			WHERE S.NormAcc = U.NormAcc
+		)
+
+		ORDER BY AccountNo
+
+	END
+	---------------------------------------------------
+	-- OPTTYPE 3 
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','2'
+	---------------------------------------------------
+	ELSE IF @optType = '3'
+	BEGIN
+		SELECT 
+				W.productCode
+			   ,W.segmentCode AS SEG
+			   ,D.*
+		FROM #UPLDISDATA d
+		LEFT JOIN #WORKING w ON D.FullAccNo = w.loanAccountNo
+		WHERE w.loanAccountNo IS NULL;
+	END
+
+		---------------------------------------------------
+	-- OPTTYPE 3 Ã¢â€ â€™ Disbursement has extra data (not in WORKING)
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','4' 
+	---------------------------------------------------
+
+	ELSE IF @optType = '4'
+	BEGIN
+		SELECT * FROM #EBBSDATA
+   END
+	
+   ELSE IF @optType = '5' ---STAFF PL
+	BEGIN
+		SELECT T.SlNo_Processor,
+	           T.Sales_Channel_Name,
+	           T.Report_Date,
+	           T.Facility_Type,
+	           T.Loan_Appl_Id,
+	           T.Facility_RefNo,
+	           T.Loan_Category,
+	           T.TXN_ACCT_No,
+	           T.Full_ACCT_No,
+	           T.New_Loan_Limit,
+	           T.Old_Loan_Limit,
+	           T.Net_Disb_Amount,
+	           T.Applicant_Customer_Name,
+	           T.Sales_Person_Code, -------REMARKS
+	           T.Referral_Code,
+	           T.Banca_Ins,
+	           T.[1st_Disb_Date],
+	           T.PO_Beneficiary,			
+	           T.Chck_Loan_Type,
+	           T.Link_ACCT_No,
+	           T.Product_Name_Mapped,
+	           T.Loan_ACCT_No,
+	           T.Disb_Date,
+	           T.Int_Rate,
+	           T.Segment,
+	           T.NF2FProduct
+		FROM #WORKING_PLDATA T
+		WHERE T.productCode in ('317','881')
+	END
+
+	ELSE IF @optType = '6'
+	BEGIN
+		SELECT 
+			 COALESCE(w.loanAccountNo, d.FullAccNo)     AS [Loan_ACCT_No],
+			 w.productCode                              AS [System_ProductCode],
+			 d.FacilityType                             AS [Upload_FacilityType],
+			 w.sanctionLimit                            AS [System_Limit],
+			 d.SanctionLimit                            AS [Upload_Limit],
+
+			 CASE 
+				WHEN w.loanAccountNo IS NOT NULL 
+					 AND d.FullAccNo IS NOT NULL 
+					 THEN 'Matched'
+
+				WHEN w.loanAccountNo IS NULL 
+					 AND d.FullAccNo IS NOT NULL 
+					 THEN 'Not match with System (Only in Upload)'
+
+				WHEN w.loanAccountNo IS NOT NULL 
+					 AND d.FullAccNo IS NULL 
+					 THEN 'Not match with Upload (Only in System)'
+			 END AS Findings
+
+		FROM #WORKING w
+		FULL OUTER JOIN #UPLDISDATA d 
+			 ON w.loanAccountNo = d.FullAccNo
+
+		WHERE
+			(@optType = '1' AND w.loanAccountNo IS NOT NULL AND d.FullAccNo IS NOT NULL)
+		 OR (@optType = '2' AND w.loanAccountNo IS NOT NULL AND d.FullAccNo IS NULL)
+		 OR (@optType = '3' AND w.loanAccountNo IS NULL AND d.FullAccNo IS NOT NULL)
+	END
+
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','auto' 
+   ELSE IF @optType = 'auto' 
+	BEGIN
+		SELECT
+			ROW_NUMBER() OVER (ORDER BY p.loanAccNo) AS slNo,           -- auto generated
+
+			p.salesChannel        AS branchOrVC,
+			p.disDate             AS disbursementDate,
+			p.facilityType        AS facilityType,
+			p.llid                AS llid,
+			p.facilityNoLOAN      AS facilityNumber,
+			p.loanCategory        AS category,
+			p.linkAccNo           AS transactionAccountNo,
+			p.loanAccNo           AS loanAccountNo,
+			p.newLoanLimit        AS loanLimit,
+			p.oldLoanLimit        AS oldLimit,
+			p.netAmount           AS netDisbursed,
+			p.customerName        AS customerName,
+			p.salesPerson         AS salesPerson,
+			p.referralCode        AS referralCode,
+			p.banca               AS insurance
+
+			FROM LamsDisbrusmentFinalData p
+			WHERE
+			p.productCode IN ('861', '906')
+			AND reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+
+
+		--GROUP BY reportingDate;
+
+	END
+
+ELSE IF @optType = 'autoSum'
+BEGIN
+    SELECT 
+        /* =COUNTA(A6:A1048576)-G2 */
+        COUNT(*) AS autoTotalNoOfLoan,
+
+        /* =COUNTIF(D:D,"Islamic Auto Finance")
+           +COUNTIF(D:D,"IAF")
+           +COUNTIF(D:D,"SAADIQ AUTO FINANCE") */
+        COUNT(
+            CASE 
+                WHEN P.loanCategory IN (
+                    'Islamic Auto Finance',
+                    'IAF',
+                    'SAADIQ AUTO FINANCE'
+                )
+                THEN 1
+            END
+        ) AS autoTotalNoOfIaf,
+
+        /* =SUM(L6:L1048576)-G3 */
+        COALESCE(SUM(P.netAmount), 0) AS autoTotalFigureBdt1,
+
+        /* =(SUMIF(D:D,"Islamic Auto Finance",L:L)
+              +SUMIF(D:D,"IAF",L:L)) */
+        COALESCE(
+            SUM(
+                CASE 
+                    WHEN P.loanCategory IN (
+                        'Islamic Auto Finance',
+                        'IAF',
+                        'SAADIQ AUTO FINANCE'
+                    )
+                    THEN P.netAmount
+                    ELSE 0
+                END
+            ),
+        0) AS autoTotalFigureBdt2
+
+    FROM LamsDisbrusmentFinalData P
+    WHERE P.productCode IN ('861', '906')
+      AND P.reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+	--ORDER BY reportingDate;
+
+	END
+
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','sme' 
+    ELSE IF @optType = 'sme'  
+	BEGIN
+		SELECT
+			ROW_NUMBER() OVER (ORDER BY p.loanAccNo) AS slNo,           -- auto generated
+
+			P.salesChannel        AS branchOrVC,
+			P.disDate             AS disbursementDate,
+			P.facilityType        AS facilityType,
+			P.llid                AS llid,
+			P.facilityNoLOAN      AS facilityNumber,
+			P.loanCategory        AS category,
+			P.linkAccNo           AS transactionAccountNo,
+			P.loanAccNo           AS loanAccountNo,
+			P.newLoanLimit        AS loanLimit,
+			P.oldLoanLimit        AS oldLimit,
+			P.netAmount           AS netDisbursed,
+			P.customerName        AS customerName,
+			P.salesPerson         AS salesPerson,
+			P.referralCode        AS referralCode,
+			P.banca               AS insurance
+
+			FROM LamsDisbrusmentFinalData P
+			WHERE
+			productCode IN ('350', '357')
+			AND reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+			--GROUP BY reportingDate;
+
+	END
+	
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','smeSum' 
+	ELSE IF @optType = 'smeSum'
+	BEGIN
+		SELECT
+			/* Total SME Loan */
+			COUNT(*)
+			- SUM(CASE 
+					WHEN facilityType IN ('BIF','IBIF','ISLAMIC BUSINESS INSTALMENT FINANCE')
+					THEN 1 ELSE 0 
+				  END)
+			- SUM(CASE 
+					WHEN loanCategory IN ('OD Renewal','OD Increase')
+					THEN 1 ELSE 0 
+				  END) AS smeTotalNoOfLoan,
+
+			/* Total IBIF */
+			SUM(CASE 
+				  WHEN facilityType IN ('BIF','IBIF','ISLAMIC BUSINESS INSTALMENT FINANCE')
+				  THEN 1 ELSE 0 
+				END) AS smeTotalNoOfIbif,
+
+			/* Total OD Renewal */
+			SUM(CASE 
+				  WHEN loanCategory IN ('OD Renewal','OD Increase')
+				  THEN 1 ELSE 0 
+				END) AS smeTotalNoOfBilOdRenewal,
+
+			/* SME Total Figure (NET) */
+			SUM(netAmount)
+			- SUM(CASE 
+					WHEN facilityType IN ('BIF','IBIF','ISLAMIC BUSINESS INSTALMENT FINANCE')
+					THEN netAmount ELSE 0
+				  END)
+			- SUM(CASE 
+					WHEN loanCategory IN ('OD Renewal','OD Increase')
+					THEN netAmount ELSE 0
+				  END) AS smeTotalFigureBdt1,
+
+			/* IBIF Net */
+			SUM(CASE 
+				  WHEN facilityType IN ('BIF','IBIF','ISLAMIC BUSINESS INSTALMENT FINANCE')
+				  THEN netAmount ELSE 0
+				END) AS smeTotalFigureBdt2,
+
+			/* OD Renewal Net */
+			SUM(CASE 
+				  WHEN loanCategory IN ('OD Renewal','OD Increase')
+				  THEN netAmount ELSE 0
+				END) AS smeTotalFigureBdt3
+
+		FROM LamsDisbrusmentFinalData
+		WHERE productCode IN ('350','357')
+		  AND reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+	END
+
+    -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','GIL' 
+	ELSE IF @optType = 'gil'  
+	BEGIN
+		SELECT
+			ROW_NUMBER() OVER (ORDER BY p.loanAccNo) AS slNo,           -- auto generated
+
+			P.salesChannel        AS branchOrVC,
+			P.disDate             AS disbursementDate,
+			P.facilityType        AS facilityType,
+			P.llid                AS llid,
+			P.facilityNoLOAN      AS facilityNumber,
+			P.loanCategory        AS category,
+			P.linkAccNo           AS transactionAccountNo,
+			P.loanAccNo           AS loanAccountNo,
+			P.newLoanLimit        AS loanLimit,
+			P.oldLoanLimit        AS oldLimit,
+			P.netAmount           AS netDisbursed,
+			P.customerName        AS customerName,
+			P.salesPerson         AS salesPerson,
+			P.referralCode        AS referralCode,
+			P.banca               AS insurance,
+			''                    AS refOfGuarantee
+
+			FROM LamsDisbrusmentFinalData  P
+			WHERE
+			productCode IN ('359', '360')
+			AND reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate		--GROUP BY reportingDate;
+
+	END
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','GILsum' 
+	ELSE IF @optType = 'gilSum'
+	BEGIN
+		SELECT
+			/* Total GIL Loan */
+			COUNT(*)
+			- SUM(CASE 
+					WHEN facilityType IN ('Orjon Women Enterprenurs','IFAP')
+					THEN 1 ELSE 0 
+				  END) AS gilTotalNoOfLoan,
+
+			/* Total GIL / Orjon */
+			SUM(CASE 
+				  WHEN facilityType IN ('Orjon Women Enterprenurs','IFAP')
+				  THEN 1 ELSE 0 
+				END) AS gilTotalNoOfGilOrjon,
+
+			/* GIL Total Figure (Loan Limit) */
+			SUM(netAmount)
+			- SUM(CASE 
+					WHEN facilityType IN ('Orjon Women Enterprenurs','IFAP')
+					THEN netAmount ELSE 0
+				  END) AS gilTotalFigureBdt1,
+
+			/* GIL / Orjon Total Figure (NET) */
+			SUM(CASE 
+				  WHEN facilityType IN ('Orjon Women Enterprenurs','IFAP')
+				  THEN netAmount ELSE 0
+				END) AS gilTotalFigureBdt2
+
+		FROM LamsDisbrusmentFinalData
+		WHERE productCode IN ('359','360')
+		  AND reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+		--ORDER BY reportingDate;
+	END
+
+    -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','MORT' 
+	ELSE IF @optType = 'mort'  
+	BEGIN
+		SELECT
+			ROW_NUMBER() OVER (ORDER BY p.loanAccNo) AS slNo,           -- auto generated
+
+			P.salesChannel        AS branchOrVC,
+			P.disDate             AS disbursementDate,
+			P.facilityType        AS facilityType,
+			P.llid                AS llid,
+			P.facilityNoLOAN      AS facilityNumber,
+			P.loanCategory        AS category,
+			P.linkAccNo           AS transactionAccountNo,
+			P.loanAccNo           AS loanAccountNo,
+			P.newLoanLimit        AS loanLimit,
+			P.oldLoanLimit        AS oldLimit,
+			P.netAmount           AS netDisbursed,
+			P.customerName        AS customerName,
+			P.salesPerson         AS salesPerson,
+			P.referralCode        AS referralCode,
+			P.banca               AS insurance,
+			P.disDate             AS firstDisDate,
+			p.netAmount        AS grossAmount
+
+			FROM LamsDisbrusmentFinalData P
+			WHERE
+			productCode IN ('871', '872','907','915')
+			AND reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+			--ORDER BY reportDate;
+
+	END
+
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','MORTsum' 
+	ELSE IF @optType = 'mortSum'
+	BEGIN
+		SELECT
+
+		/* ---------------- COUNTS ---------------- */
+
+		/* Loan1 = Total Ã¢â‚¬â€œ SHF Ã¢â‚¬â€œ MOA Ã¢â‚¬â€œ SOA */
+		COUNT(*)
+		- SUM(CASE WHEN facilityType IN ('Saadiq Home Finance','SHF') THEN 1 ELSE 0 END)
+		- SUM(CASE WHEN facilityType = 'MORTGAGEONE ACCOUNT' THEN 1 ELSE 0 END)
+		- SUM(CASE WHEN facilityType = 'SAADIQUEONE ACCOUNT' THEN 1 ELSE 0 END)
+		AS mortgageTotalNoOfLoan1,
+
+
+		/* SHF */
+		SUM(CASE 
+				WHEN facilityType IN ('Saadiq Home Finance','SHF')
+				THEN 1 ELSE 0 
+			END) AS mortgageTotalNoOfShf1,
+
+
+		/* Mortgage Loan = same as Loan1 (Excel logic) */
+		COUNT(*)
+		- SUM(CASE WHEN facilityType IN ('Saadiq Home Finance','SHF') THEN 1 ELSE 0 END)
+		- SUM(CASE WHEN facilityType = 'MORTGAGEONE ACCOUNT' THEN 1 ELSE 0 END)
+		- SUM(CASE WHEN facilityType = 'SAADIQUEONE ACCOUNT' THEN 1 ELSE 0 END)
+		AS mortgageTotalNoOfMortgageLoan,
+
+
+		/* SHF duplicate */
+		SUM(CASE 
+				WHEN facilityType IN ('Saadiq Home Finance','SHF')
+				THEN 1 ELSE 0 
+			END) AS mortgageTotalNoOfShf2,
+
+
+		/* MOA */
+		SUM(CASE 
+				WHEN facilityType = 'MORTGAGEONE ACCOUNT'
+				THEN 1 ELSE 0 
+			END) AS mortgageTotalNoOfMoa,
+
+
+		/* Loan2 = MOA */
+		SUM(CASE 
+				WHEN facilityType = 'MORTGAGEONE ACCOUNT'
+				THEN 1 ELSE 0 
+			END) AS mortgageTotalNoOfLoan2,
+
+
+		/* SOA */
+		SUM(CASE 
+				WHEN facilityType = 'SAADIQUEONE ACCOUNT'
+				THEN 1 ELSE 0 
+			END) AS mortgageTotalNoOfSoa,
+
+
+		/* Loan3 = SOA */
+		SUM(CASE 
+				WHEN facilityType = 'SAADIQUEONE ACCOUNT'
+				THEN 1 ELSE 0 
+			END) AS mortgageTotalNoOfLoan3,
+
+
+		/* ---------------- AMOUNTS ---------------- */
+
+		/* Total Limit excluding SHF + MOA + SOA */
+		SUM(netAmount)
+		- SUM(CASE WHEN facilityType IN ('Saadiq Home Finance','SHF') THEN netAmount ELSE 0 END)
+		- SUM(CASE WHEN facilityType = 'MORTGAGEONE ACCOUNT' THEN netAmount ELSE 0 END)
+		- SUM(CASE WHEN facilityType = 'SAADIQUEONE ACCOUNT' THEN netAmount ELSE 0 END)
+		AS mortgageTotalFigureBdt1,
+
+
+		/* SHF Limit */
+		SUM(CASE 
+				WHEN facilityType IN ('Saadiq Home Finance','SHF')
+				THEN netAmount ELSE 0 
+			END) AS mortgageTotalFigureBdt2,
+
+
+		/* Gross (Net actually) excluding SHF + MOA + SOA */
+		SUM(netAmount)
+		- SUM(CASE WHEN facilityType IN ('Saadiq Home Finance','SHF') THEN netAmount ELSE 0 END)
+		- SUM(CASE WHEN facilityType = 'MORTGAGEONE ACCOUNT' THEN netAmount ELSE 0 END)
+		- SUM(CASE WHEN facilityType = 'SAADIQUEONE ACCOUNT' THEN netAmount ELSE 0 END)
+		AS mortgageTotalGrossFigureBdt1,
+
+
+		/* SHF Gross */
+		SUM(CASE 
+				WHEN facilityType IN ('Saadiq Home Finance','SHF')
+				THEN netAmount ELSE 0 
+			END) AS mortgageTotalFigureBdt3,
+
+
+		/* MOA Limit */
+		SUM(CASE 
+				WHEN facilityType = 'MORTGAGEONE ACCOUNT'
+				THEN netAmount ELSE 0 
+			END) AS mortgageTotalFigureBdt4,
+
+
+		/* MOA Gross */
+		SUM(CASE 
+				WHEN facilityType = 'MORTGAGEONE ACCOUNT'
+				THEN netAmount ELSE 0 
+			END) AS mortgageTotalGrossFigureBdt2,
+
+
+		/* SOA Limit */
+		SUM(CASE 
+				WHEN facilityType = 'SAADIQUEONE ACCOUNT'
+				THEN netAmount ELSE 0 
+			END) AS mortgageTotalFigureBdt5,
+
+
+		/* SOA Gross */
+		SUM(CASE 
+				WHEN facilityType = 'SAADIQUEONE ACCOUNT'
+				THEN netAmount ELSE 0 
+			END) AS mortgageTotalGrossFigureBdt3
+
+
+		FROM LamsDisbrusmentFinalData
+		WHERE productCode IN ('871','872','907','915')
+		  AND reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+	END
+
+
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','pl' 
+	ELSE IF @optType = 'pl'  
+	BEGIN
+		SELECT
+			ROW_NUMBER() OVER (ORDER BY p.loanAccNo) AS slNo,           -- auto generated
+
+			P.salesChannel        AS branchOrVC,
+			P.disDate             AS disbursementDate,
+			P.facilityType        AS facilityType,
+			P.llid                AS llid,
+			P.facilityNoLOAN      AS facilityNumber,
+			P.loanCategory        AS category,
+			P.linkAccNo           AS transactionAccountNo,
+			P.loanAccNo           AS loanAccountNo,
+			P.newLoanLimit        AS loanLimit,
+			P.oldLoanLimit        AS oldLimit,
+			P.netAmount           AS netDisbursed,
+			P.customerName        AS customerName,
+			P.salesPerson         AS salesPerson,
+			P.referralCode        AS referralCode,
+			P.banca               AS insurance,
+			P.segment			  AS segment,
+			p.NF2FProduct         AS nfMarking 
+
+			FROM LamsDisbrusmentFinalData P
+			WHERE P.productCode ='851'
+			AND P.reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+			ORDER BY reportDate ;
+
+	END
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','plsum' 
+	ELSE IF @optType = 'plSum'
+	BEGIN
+		SELECT 
+			/* =COUNTA(A6:A1048576)-F2 */
+			COUNT(*) AS plTotalNoOfLoan,
+
+			/* =COUNTIF(D:D,"Saadiq Personal Finance")+COUNTIF(D:D,"IPF") */
+			COUNT(CASE 
+					WHEN P.loanCategory IN ('Saadiq Personal Finance', 'IPF') 
+					THEN 1 
+				  END) AS plTotalNoOfIpf,
+
+			/* =SUM(L6:L1048576)-F3 */
+			COALESCE(SUM(P.netAmount), 0) AS plTotalFigureBdt1,
+
+			/* =(SUMIF(D:D,"Saadiq Personal Finance",L:L)+SUMIF(D:D,"IPF",L:L)) */
+			COALESCE(
+				SUM(
+					CASE 
+						WHEN P.loanCategory IN ('Saadiq Personal Finance', 'IPF') 
+						THEN P.netAmount 
+						ELSE 0 
+					END
+				), 
+			0) AS plTotalFigureBdt2
+
+		FROM LamsDisbrusmentFinalData P
+		WHERE P.productCode = '851'
+		  AND P.reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+	END
+
+
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','CL' 
+	ELSE IF @optType = 'cl'  
+	BEGIN
+		SELECT
+			ROW_NUMBER() OVER (ORDER BY p.loanAccNo) AS slNo,           -- auto generated
+
+			P.salesChannel        AS branchOrVC,
+			P.disDate             AS disbursementDate,
+			P.facilityType        AS facilityType,
+			P.llid                AS llid,
+			P.facilityNoLOAN      AS facilityNumber,
+			P.loanCategory        AS category,
+			P.linkAccNo           AS transactionAccountNo,
+			P.loanAccNo           AS loanAccountNo,
+			P.newLoanLimit        AS loanLimit,
+			P.oldLoanLimit        AS oldLimit,
+			P.netAmount           AS netDisbursed,
+			P.customerName        AS customerName,
+			P.salesPerson         AS salesPerson,
+			P.referralCode        AS referralCode,
+			P.banca               AS insurance
+
+			FROM LamsDisbrusmentFinalData P
+			WHERE
+			productCode ='001'
+			AND reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+	END
+
+	ELSE IF @optType = 'clSum'
+	BEGIN
+		SELECT 
+			/* =COUNTA(A6:A1048576) */
+			COUNT(*) AS cashlineTotalNoOfLoan,
+
+			/* =SUM(L6:L1048576) */
+			COALESCE(SUM(P.netAmount), 0) AS cashlineTotalFigureBdt
+
+		FROM LamsDisbrusmentFinalData P
+		WHERE P.productCode = '001'
+		  AND P.reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+	END
+
+
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','POD' 
+	ELSE IF @optType = 'pod'  
+	BEGIN
+		SELECT
+			NULL AS slNo,
+			''   AS branchOrVC,
+			NULL AS disbursementDate,
+			''   AS facilityType,
+			''   AS llid,
+			''   AS facilityNumber,
+			''   AS category,
+			''   AS transactionAccountNo,
+			''   AS loanAccountNo,
+			NULL AS loanLimit,
+			NULL AS oldLimit,
+			NULL AS netDisbursed,
+			''   AS customerName,
+			''   AS salesPerson,
+			''   AS referralCode,
+			''   AS insurance
+	END
+
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','PODsum' 
+	ELSE IF @optType = 'podSum'
+	BEGIN
+		SELECT 
+			NULL AS podTotalNoOfLoan,
+			NULL AS podTotalNoOfIpf,
+			NULL AS podTotalFigureBdt1,
+			NULL AS podTotalFigureBdt2
+		--FROM LamsDisbrusmentFinalData where reportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+	END
+
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','closing' 
+	ELSE IF @optType = 'closing'
+	BEGIN
+		;WITH ClosingData AS
+		(
+			SELECT
+				branchOrVC,
+				ReceivingDate                 AS closingDate,
+				FacilityType,
+				FacilityNo                    AS facilityRefNo,
+				LoanMaster,
+				NewLoanAcNo                   AS loanAccountNo,
+				RIGHT('0000000000'+ REPLACE(NewLoanAcNo,'-',''),11)         AS eSuiteAccountNo,
+				TransactionAcNo               AS transactionAccountNo,
+				TRY_CONVERT(DECIMAL(18,2), REPLACE(LimitInFigure, ',', '')) AS limitInWords,
+				TRY_CONVERT(DECIMAL(18,2), REPLACE(Commission, ',', ''))    AS commission,
+				CustomerName,
+				Remarks,
+				TRY_CONVERT(DECIMAL(18,2), REPLACE(closingBalance, ',', '')) AS closingBalance,
+				NULL                          AS actualLoanLimit,
+				NULL                          AS category,
+				TRY_CONVERT(DECIMAL(18,2), REPLACE(OutstandingAmount, ',', '')) AS outstandingAmount,
+				ReasonForClosing,
+				SentBy                        AS salesChannel,
+				NULL                          AS expiryDate
+			FROM lamsClosingFinalData
+			WHERE ReportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+			  AND reportType IN ('closing','part')   --  FULL + PART
+		)
+		SELECT
+			ROW_NUMBER() OVER (ORDER BY closingDate, branchOrVC) AS slNo,
+			*
+		FROM ClosingData;
+	END
+
+
+	-- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','closingSum' 
+	ELSE IF @optType = 'closingSum'
+	BEGIN
+		;WITH ClosingSum AS
+		(
+			SELECT
+				FacilityType,
+				closingBalance
+			FROM lamsClosingFinalData
+			WHERE ReportingDate BETWEEN @startDtOfRptMonth AND @reportingDate
+			  AND reportType IN ('closing','part')
+		)
+		SELECT
+			/* =COUNTA(A:A) */
+			COUNT(*) AS totalVolumeTotalNoOfClosure,
+
+			/* CB Loan Closing (Non-PART) */
+			COUNT(*) 
+			- COUNT(CASE WHEN FacilityType LIKE '%part%' THEN 1 END)
+			  AS totalVolumeCbLoanClosing,
+
+			/* Excel: no logic */
+			NULL AS totalVolumeStaffLoanClosing,
+
+			/* Part Settlement */
+			COUNT(CASE 
+					WHEN FacilityType LIKE '%part%' 
+					THEN 1 
+				  END) AS totalVolumePartSettlement,
+
+			/* Total Figure (Million BDT) */
+			COALESCE(SUM(closingBalance) / 1000000, 0)
+				AS totalFigureBdtTotalNoOfClosure,
+
+			/* Excel: no logic */
+			NULL AS totalFigureBdtCbLoanClosing,
+			NULL AS totalFigureBdtStaffLoanClosing,
+			NULL AS totalFigureBdtPartSettlement
+		FROM ClosingSum;
+	END
+
+
+
+	DROP TABLE #WORKING;
+	DROP TABLE #UPLDISDATA
+	DROP TABLE #EBBSDATA
+	DROP TABLE #WORKING_PLDATA
+	DROP TABLE #RESULT_DATA
+--END
+
+
+--select * from UploadFileNames where fileName in (
+--'BDDB2_DAILY.txt',
+--'CRB718C1_DAILY.txt',
+--'CRB720C1.txt',
+--'Disbursement_1st_Dis_Date_Dump_Daily.xlsx',
+--'Disbursement_Segment_Dump_Daily.csv',
+--'LAMS DATA NEW 2025.xlsx',
+--'LAMS_Daily_Disb_Data_4_Disb_Report.csv'
+--)
+
+--select * from ImpLamsClosingKRB275R1Daily           where importDate ='2026-02-10'
+--select * from ImpLamsRlsRegulatoryDaily				where importDate ='2026-02-10'
+--select * from ImpLamsEbbsBddb2Daily					where importDate ='2026-02-10'
+--select * from ImpLamsRlsCrb720C1					where importDate ='2026-02-10'
+--select * from ImpConClosingDhkDaily					where importDate ='2026-02-10'
+--select * from ImpConClosingCtgDaily					where importDate ='2026-02-10'
+--select * from ImpConDisbursementDaily				where importDate ='2026-02-10'
+--select * from ImpConDisbursementPlDaily				where importDate ='2026-02-10'
+--select * from ImpConDisbursementSegmentDaily		where importDate ='2026-02-10'
+--select * from ImpConDisbursementFirstDateDaily		where importDate ='2026-02-10'
+--select * from LamsDisDataBddb2Daily
+
+
+
+
+
+--
+--select * from LamsDisDataBddb2Daily
+
+
+
+
+
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','auto' 
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','SME' 
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','CL' 
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','MORT' 
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','PL' 
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','POD' 
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','GIL' 
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','closing' 
+   -- EXEC [sp_Lams_Disbrusment_Report_Daily] '2026-02-10','','closingSum' 
+
