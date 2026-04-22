@@ -1,0 +1,6 @@
+Draft notes for the SupportSCB project.
+- Initial project setup
+- Requirements gathering
+- Timeline considerations
+- Key stakeholders identified
+- Next steps outlined
