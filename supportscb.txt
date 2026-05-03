@@ -1,1 +1,39 @@
 
+SELECT 
+    CASE 
+        WHEN prod.proName IN ('Over Draft', 'BIL-OD') 
+            THEN 'Business Overdraft'
+
+        WHEN prod.proName IN ('BIL', 'BIL(105%)', 'BFS-R/L') 
+            THEN 'Business Installment Loan'
+
+        WHEN prod.proName IN ('LAP-Term Loan', 'LAP-OD') 
+            THEN 'Loan Against Property'
+
+        WHEN prod.proName = 'IFAP' 
+            THEN 'Saadiq Finance Against Property'
+
+        WHEN prod.proName = 'SCM' 
+            THEN 'Saadiq Commercial Mortgage'
+
+        WHEN prod.proName = 'IBIF' 
+            THEN 'Saadiq Business Instal Finance'
+
+        ELSE prod.proName
+    END AS ProductCategory
+FROM product prod
+WHERE prod.llid IN (
+    '1133523',
+    '1135324',
+    '1131242',
+    '113122',
+    '357781',
+    '372209',
+    '361993',
+    '400726',
+    '436532',
+    '433297',
+    '438190',
+    '443826',
+    '444794'
+);
