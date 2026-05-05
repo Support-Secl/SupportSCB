@@ -27,6 +27,36 @@ SELECT
     PCAT.[pctCategory],
   --  PROD.[proName],
 	CASE 
+
+	 -- Personal / Staff
+    WHEN PROD.proName =  'Staff Personal Loan'
+        THEN 'Staff Loan'
+
+    WHEN PROD.proName =  'Islamic Personal Finance'
+        THEN 'Saadiq Personal Finance'
+
+    WHEN PROD.proName = 'Staff Festi Loan'
+        THEN 'Staff Festival Loan' 
+
+    -- Auto
+    WHEN PROD.proName = 'Islamic Auto Finance'
+        THEN 'Saadiq Auto Finance' 
+
+    WHEN PROD.proName =  'Staff Auto Loan'
+        THEN 'Staff Auto'
+
+    -- Mortgage
+       WHEN PROD.proName = 'Staff Mortgage' 
+        THEN 'STAFF'
+
+    WHEN PROD.proName = 'MORTGAGEONE ACCOUNT' 
+        THEN 'MortgageOne Account'
+
+    -- Cash Line
+    WHEN PROD.proName = 'CLF'
+        THEN 'Cash Line Fixed'
+
+    -- SME
     WHEN PROD.proName IN ('Over Draft', 'BIL-OD') 
         THEN 'Business Overdraft'
 
@@ -64,12 +94,12 @@ SELECT
     15,
     NULL
 FROM
-    IDTP_Report.[dbo].[tbl_App_LoanApplication] LA
-    LEFT JOIN IDTP_Report.[dbo].[tbl_App_Loan] L ON LA.[lapLLID] = L.[lonLLID]
-    LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_Product] PROD ON LA.[lapProduct] = PROD.[proCode]
-    LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_ProductCategory] PCAT ON PROD.[proProductCategory] = PCAT.[pctCode]
-    LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_Source] SRC ON LA.[lapSource] = SRC.[srcCode]
-    LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_LoanCategory] LCAT ON L.[lonCategory] = LCAT.[lcaCode]
+    LAMS.[dbo].[tbl_App_LoanApplication] LA
+    LEFT JOIN LAMS.[dbo].[tbl_App_Loan] L ON LA.[lapLLID] = L.[lonLLID]
+    LEFT JOIN LAMS.[dbo].[tbl_Conf_Product] PROD ON LA.[lapProduct] = PROD.[proCode]
+    LEFT JOIN LAMS.[dbo].[tbl_Conf_ProductCategory] PCAT ON PROD.[proProductCategory] = PCAT.[pctCode]
+    LEFT JOIN LAMS.[dbo].[tbl_Conf_Source] SRC ON LA.[lapSource] = SRC.[srcCode]
+    LEFT JOIN LAMS.[dbo].[tbl_Conf_LoanCategory] LCAT ON L.[lonCategory] = LCAT.[lcaCode]
 WHERE
     LA.[lapLLID] IS NOT NULL   -- adjust filter as needed
 	AND LA.[lapLLID] IN (
