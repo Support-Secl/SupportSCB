@@ -16,11 +16,8 @@ SELECT
     LA.[lapLLID],
     CONVERT(varchar, DIS.[disDisburseDate], 103),
 	L.[lonLoanAccNo],
-    CHGT.[chtType],
-	CASE
-		/* =========================
-		   1. STAMP CHARGE RULE
-		   ========================= */
+    CASE
+
 		WHEN CHGT.[chtType] = 'Stamp Charge'
 			 AND SRC.[srcName] IN (
 				'AGRABAD',
@@ -40,10 +37,6 @@ SELECT
 		WHEN CHGT.[chtType] = 'Stamp Charge'
 		THEN 'STAMP-DHK'
 
-
-		/* =========================
-		   2. BIL OD COMMISSION RULE
-		   ========================= */
 		WHEN CHGT.[chtType] = 'BIL OD Commission'
 			 AND LEFT(L.[lonLoanAccNo], 2) = '06'
 		THEN 'BIL PROCESSING FEE - EBBS'
@@ -52,10 +45,6 @@ SELECT
 			 AND LEFT(L.[lonLoanAccNo], 2) <> '06'
 		THEN 'BIL PROCESSING FEE & VAT - RLS'
 
-
-		/* =========================
-		   3. GROUPED COMMISSION RULE
-		   ========================= */
 		WHEN CHGT.[chtType] IN (
 			'Commission',
 			'LAP OD Commission',
@@ -74,11 +63,34 @@ SELECT
 		AND LEFT(L.[lonLoanAccNo], 2) <> '06'
 		THEN 'BIL PROCESSING FEE & VAT - RLS'
 
+		WHEN CHGT.[chtType] = 'Notarization'
+		THEN 'NOTARIZATION FEES A/C A-LOAN ASSETS OPS DHK'
 
-		/* =========================
-		   4. DEFAULT
-		   ========================= */
+		WHEN CHGT.[chtType] = 'Fees'
+		THEN 'PROCESSING FEE / COMMISSION:'
+
+		-- VAT < 100 => CIB CHARGE (but keep NULL as NULL)
+		WHEN CHGT.[chtType] LIKE 'VAT%'
+			 AND CHG.[chrAmount] IS NOT NULL
+			 AND CHG.[chrAmount] < 100
+		THEN 'CIB CHARGE'
+
+		-- VAT > 100 => category mapping (but keep NULL as NULL)
+		WHEN CHGT.[chtType] LIKE 'VAT%'
+			 AND CHG.[chrAmount] IS NOT NULL
+			 AND CHG.[chrAmount] > 100
+		THEN 
+			CASE PCAT.[pctCategory]
+				WHEN 'Auto' THEN 'PROCESSING FEE / COMMISSION:'
+				WHEN 'PL' THEN 'VAT AT SOURCE FEES & COMM'
+				WHEN 'Cash Line' THEN 'PROCESSING FEE'
+				WHEN 'SME' THEN 'BIL PROCESSING FEE - EBBS'
+				WHEN 'Mortgage' THEN 'MORTGAGE PROCESSING FEE'
+				ELSE CHGT.[chtType]
+			END
+
 		ELSE CHGT.[chtType]
+
 	END AS chtType,
     CHGT.chtAccount,
     CONVERT(varchar, CHG.[chrAmount]),
