@@ -1,0 +1,57 @@
+SELECT 'LamsTopLevelInfo'       AS TableName, COUNT(*) AS TotalCount FROM [dbo].[LamsTopLevelInfo]
+
+UNION ALL
+SELECT '[LamsBusinessInfo]',     COUNT(*) FROM [dbo].LamsBusinessInfo
+UNION ALL
+SELECT 'LamsApplicantInfo',     COUNT(*) FROM [dbo].[LamsApplicantInfo]
+UNION ALL
+SELECT 'LamsJointApplicantInfo',COUNT(*) FROM [dbo].[LamsJointApplicantInfo]
+UNION ALL
+SELECT 'LamsGuarantorInfo',     COUNT(*) FROM [dbo].[LamsGuarantorInfo]
+UNION ALL
+SELECT 'LamsOwnerInfo',         COUNT(*) FROM [dbo].[LamsOwnerInfo]
+UNION ALL
+SELECT 'LamsLoanInfo',          COUNT(*) FROM [dbo].[LamsLoanInfo]
+UNION ALL
+SELECT 'LamsDisbursInfo',       COUNT(*) FROM [dbo].[LamsDisbursInfo]
+UNION ALL
+SELECT 'LamsCharges',           COUNT(*) FROM [dbo].[LamsCharges]
+UNION ALL
+SELECT 'LamsTransaction',       COUNT(*) FROM [dbo].[LamsTransaction]
+UNION ALL
+SELECT 'LamsDeferralInfo',      COUNT(*) FROM [dbo].[LamsDeferralInfo]
+UNION ALL
+SELECT 'LamsSecurityInfo',      COUNT(*) FROM [dbo].[LamsSecurityInfo]
+UNION ALL
+SELECT 'LamsInsuranceInfo',     COUNT(*) FROM [dbo].[LamsInsuranceInfo];
+
+
+DELETE FROM [dbo].[LamsTopLevelInfo];
+DELETE FROM [dbo].[LamsApplicantInfo];
+DELETE FROM [dbo].[LamsBusinessInfo];
+DELETE FROM [dbo].[LamsJointApplicantInfo];
+DELETE FROM [dbo].[LamsGuarantorInfo];
+DELETE FROM [dbo].[LamsOwnerInfo];
+DELETE FROM [dbo].[LamsLoanInfo];
+DELETE FROM [dbo].[LamsDisbursInfo];
+DELETE FROM [dbo].[LamsCharges];
+DELETE FROM [dbo].[LamsTransaction];
+DELETE FROM [dbo].[LamsDeferralInfo];
+DELETE FROM [dbo].[LamsSecurityInfo];
+DELETE FROM [dbo].[LamsInsuranceInfo];
+
+BEGIN TRAN;
+
+UPDATE [dbo].[LamsTopLevelInfo]        SET status = 15;
+UPDATE [dbo].[LamsApplicantInfo]       SET status = 15;
+UPDATE [dbo].[LamsBusinessInfo]        SET status = 15;
+UPDATE [dbo].[LamsJointApplicantInfo]  SET status = 15;
+UPDATE [dbo].[LamsGuarantorInfo]       SET status = 15;
+UPDATE [dbo].[LamsOwnerInfo]           SET status = 15;
+UPDATE [dbo].[LamsLoanInfo]            SET status = 15;
+UPDATE [dbo].[LamsDisbursInfo]         SET status = 15;
+UPDATE [dbo].[LamsCharges]             SET status = 15;
+UPDATE [dbo].[LamsTransaction]         SET status = 15;
+UPDATE [dbo].[LamsDeferralInfo]        SET status = 15;
+UPDATE [dbo].[LamsSecurityInfo]        SET status = 15;
+UPDATE [dbo].[LamsInsuranceInfo]       SET status = 15;
