@@ -1,4 +1,4 @@
-INSERT INTO [CBRM].[dbo].[LamsBusinessInfoTemp] (
+INSERT INTO [CBRM].[dbo].[LamsBusinessInfo] (
     [relNo],
     [llid],
     [legalEntityofBusiness],
@@ -50,22 +50,7 @@ FROM
     LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_Country] BCNT ON COM.[comBusinessCountry] = BCNT.[cntCode]
 WHERE
 
-    LA.[lapLLID] IN (
-    '1133523',
-    '1135324',
-    '1131242',
-    '1131222',
-    '357781',
-    '372209',
-    '361993',
-    '400726',
-    '436532',
-    '433297',
-    '438190',
-    '443826',
-    '444794'
-)
-and 
+  
     COM.[comCode] IS NOT NULL;
 
 	--select * from tbl_App_Company where 

@@ -1,4 +1,4 @@
-INSERT INTO [CBRM].[dbo].[LamsDisbursInfoTemp] (
+INSERT INTO [CBRM].[dbo].[LamsDisbursInfo] (
     [relNo],
     [llid],
     [nameLA],
@@ -25,7 +25,9 @@ SELECT
     LA.[lapLLID],
     LA.[lapApplicantName],
     CONVERT(varchar, DIS.[disDisburseDate], 103),
-    DIS.[disDisbursementType],
+  --  DIS.[disDisbursementType],
+	--L.[lonReferralCode],
+	CASE WHEN DIS.[disDisbursementType] ='Take Over' THEN 'Take-Over' ELSE DIS.[disDisbursementType]	END AS [disDisbursementType],
     CONVERT(varchar, DIS.[disRemainigAmount]),
     CONVERT(varchar, DIS.[disDisbursementAmount]),
     CONVERT(varchar, DIS.[disTopUpAdjstAmount]),
@@ -52,20 +54,3 @@ FROM
 		  AND T.trnPONumber IS NOT NULL
 	) TRN
 
-WHERE
-    DIS.[disNo] IS NOT NULL
-	AND LA.lapLLID IN (
-    '1133523',
-    '1135324',
-    '1131242',
-    '1131222',
-    '357781',
-    '372209',
-    '361993',
-    '400726',
-    '436532',
-    '433297',
-    '438190',
-    '443826',
-    '444794'
-);

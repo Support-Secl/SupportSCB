@@ -1,4 +1,4 @@
-INSERT INTO [CBRM].[dbo].[LamsLoanInfoTemp] (
+INSERT INTO [CBRM].[dbo].[LamsLoanInfo] (
     [relNo],
     [llid],
     [facilityNoLOAN],
@@ -166,20 +166,5 @@ FROM
     LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_Branch] CLLBR ON CLL.[cllPDCBranch] = CLLBR.[brnCode]
 WHERE
     L.[lonLLID] IS NOT NULL 
-	AND L.[lonLLID] IN (
-    '1133523',
-    '1135324',
-    '1131242',
-    '1131222',
-    '357781',
-    '372209',
-    '361993',
-    '400726',
-    '436532',
-    '433297',
-    '438190',
-    '443826',
-    '444794'
-);
 
-	--select * from [LamsLoanInfoTemp] where llid='1019555'
+	--delete from [LamsLoanInfo] where llid='1019555'

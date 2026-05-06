@@ -1,4 +1,4 @@
-INSERT INTO [CBRM].[dbo].[LamsTransactionTemp] (
+INSERT INTO [CBRM].[dbo].[LamsTransaction] (
     [llid],
     [disDate],
     [accountType],
@@ -44,28 +44,8 @@ FROM
     IDTP_Report.[dbo].[tbl_App_LoanApplication] LA
     LEFT JOIN IDTP_Report.[dbo].[tbl_Dis_Disbursement] DIS ON LA.[lapLLID] = DIS.[disLLID]
     LEFT JOIN IDTP_Report.[dbo].[tbl_Dis_Transaction] TRN ON DIS.[disNo] = TRN.[trnDisbursement]
-WHERE
-    TRN.[trnCode] IS NOT NULL
-		AND LA.lapLLID IN (
-    '1133523',
-    '1135324',
-    '1131242',
-    '1131222',
-    '357781',
-    '372209',
-    '361993',
-    '400726',
-    '436532',
-    '433297',
-    '438190',
-    '443826',
-    '444794'
-);
+
+	WHERE LA.lapLLID='1131816'
 
 
-
---Collection A/C
---Customer A/C
---Loan A/C
---Pay Order A/C
-
+	--SELECT * FROM  [CBRM].[dbo].[LamsTransaction] WHERE llid='1131816'

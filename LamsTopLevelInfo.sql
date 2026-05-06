@@ -1,4 +1,4 @@
-INSERT INTO [CBRM].[dbo].[LamsTopLevelInfoTemp] (
+INSERT INTO [CBRM].[dbo].[LamsTopLevelInfo] (
     [llid],
     [loanAccountNo],
     [productType],
@@ -29,6 +29,10 @@ SELECT
 	CASE 
 
 	 -- Personal / Staff
+
+	WHEN PROD.proName IN ('Credit Card', 'Flexi Loan') 
+        THEN 'Business Overdraft'
+
     WHEN PROD.proName =  'Staff Personal Loan'
         THEN 'Staff Loan'
 
@@ -56,6 +60,9 @@ SELECT
     WHEN PROD.proName = 'CLF'
         THEN 'Cash Line Fixed'
 
+	WHEN PROD.proName = 'CL'
+        THEN 'Cash Line OD'
+
     -- SME
     WHEN PROD.proName IN ('Over Draft', 'BIL-OD') 
         THEN 'Business Overdraft'
@@ -76,7 +83,16 @@ SELECT
         THEN 'Saadiq Business Instal Finance'
 
     ELSE PROD.[proName] END AS [proName],
-    LCAT.[lcaName],
+   -- LCAT.[lcaName],
+	CASE
+		WHEN LCAT.[lcaName] ='Top Up'
+		AND LEFT(L.[lonLoanAccNo], 2) = '06'
+		THEN 'Top Up Loan EBBS'
+		WHEN LCAT.[lcaName] ='Top Up'
+		AND LEFT(L.[lonLoanAccNo], 2) <> '06'
+		THEN 'Top Up Loan RLS'
+	
+	ELSE LCAT.[lcaName] END,
     PCAT.[pctCategory],
     PROD.[proCode],
     LA.[lapSalesPersonName],
@@ -93,27 +109,13 @@ SELECT
     NULL,
     15,
     NULL
+
 FROM
-    LAMS.[dbo].[tbl_App_LoanApplication] LA
-    LEFT JOIN LAMS.[dbo].[tbl_App_Loan] L ON LA.[lapLLID] = L.[lonLLID]
-    LEFT JOIN LAMS.[dbo].[tbl_Conf_Product] PROD ON LA.[lapProduct] = PROD.[proCode]
-    LEFT JOIN LAMS.[dbo].[tbl_Conf_ProductCategory] PCAT ON PROD.[proProductCategory] = PCAT.[pctCode]
-    LEFT JOIN LAMS.[dbo].[tbl_Conf_Source] SRC ON LA.[lapSource] = SRC.[srcCode]
-    LEFT JOIN LAMS.[dbo].[tbl_Conf_LoanCategory] LCAT ON L.[lonCategory] = LCAT.[lcaCode]
+    IDTP_Report.[dbo].[tbl_App_LoanApplication] LA
+    LEFT JOIN IDTP_Report.[dbo].[tbl_App_Loan] L ON LA.[lapLLID] = L.[lonLLID]
+    LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_Product] PROD ON LA.[lapProduct] = PROD.[proCode]
+    LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_ProductCategory] PCAT ON PROD.[proProductCategory] = PCAT.[pctCode]
+    LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_Source] SRC ON LA.[lapSource] = SRC.[srcCode]
+    LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_LoanCategory] LCAT ON L.[lonCategory] = LCAT.[lcaCode]
 WHERE
     LA.[lapLLID] IS NOT NULL   -- adjust filter as needed
-	AND LA.[lapLLID] IN (
-    '1133523',
-    '1135324',
-    '1131242',
-    '1131222',
-    '357781',
-    '372209',
-    '361993',
-    '400726',
-    '436532',
-    '433297',
-    '438190',
-    '443826',
-    '444794'
-);

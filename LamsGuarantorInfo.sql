@@ -34,8 +34,8 @@ INSERT INTO [CBRM].[dbo].[LamsGuarantorInfoTemp] (
     [subCodeLG],
     [maritalStatusLG]
 )
-SELECT top 2
-        CASE 
+SELECT
+    CASE 
         WHEN PATINDEX('%[0-9]%', G.gntName) > 0 
             THEN LEFT(
                     SUBSTRING(G.gntName, PATINDEX('%[0-9]%', G.gntName), LEN(G.gntName)),
@@ -44,14 +44,14 @@ SELECT top 2
                     ) - 1
                  )
         ELSE NULL
-    END AS relNo,                                   -- relNo
+    END AS relNo,                           -- relNo
     G.[gntLLID],                            -- llid
     NULL,                                   -- TitleLG (not available)
     G.[gntName],                            -- NameLG
     NULL,                                   -- FatherTitleLG
     G.[gntFatherName],                      -- FatherNameLG
     NULL,                                   -- MotherTitleLG
-    G.[gntSpouseName],                      -- MotherNameLG (spouse used as mother â€“ adjust if needed)
+    G.[gntSpouseName],                      -- MotherNameLG (spouse used as mother – adjust if needed)
     NULL,                                   -- SpouseTitleLG
     G.[gntSpouseName],                      -- SpouseNameLG
     NULL,                                   -- GenderLG

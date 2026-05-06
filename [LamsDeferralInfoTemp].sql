@@ -1,4 +1,4 @@
-INSERT INTO [CBRM].[dbo].[LamsDeferralInfoTemp] (
+INSERT INTO [CBRM].[dbo].[LamsDeferralInfo] (
     [relNo],
     [llid],
     [facilityNo],
@@ -19,9 +19,9 @@ INSERT INTO [CBRM].[dbo].[LamsDeferralInfoTemp] (
 SELECT
     NULL,
     DEF.[defLLID],
-    DEF.[defLoanAccNo],
-    NULL,
+    L.[lonFacilityNo],
     DEF.[defDeferralCode],
+	DEF.defName,
     DEF.[defStatus],
     DEF.[defApprover],
     CONVERT(varchar, DEF.[defDueDate], 103),
@@ -35,18 +35,8 @@ SELECT
     NULL
 FROM
     IDTP_Report.[dbo].[tbl_App_DeferralTracker] DEF
-		WHERE  DEF.defLLID IN (
-			'1133523',
-			'1135324',
-			'1131242',
-			'1131222',
-			'357781',
-			'372209',
-			'361993',
-			'400726',
-			'436532',
-			'433297',
-			'438190',
-			'443826',
-			'444794'
-		);
+		
+	LEFT JOIN IDTP_Report.[dbo].[tbl_App_Loan] L ON L.[lonLLID] = DEF.[defLLID]
+
+	--select *	FROM
+ --   IDTP_Report.[dbo].[tbl_App_DeferralTracker] DEF

@@ -1,4 +1,4 @@
-INSERT INTO [CBRM].[dbo].[LamsChargesTemp] (
+INSERT INTO [CBRM].[dbo].[LamsCharges] (
     [llid],
     [disDate],
     [chargeType],
@@ -15,8 +15,8 @@ INSERT INTO [CBRM].[dbo].[LamsChargesTemp] (
 SELECT
     LA.[lapLLID],
     CONVERT(varchar, DIS.[disDisburseDate], 103),
-	L.[lonLoanAccNo],
-    CASE
+   -- CHGT.[chtType],
+	CASE
 
 		WHEN CHGT.[chtType] = 'Stamp Charge'
 			 AND SRC.[srcName] IN (
@@ -110,23 +110,9 @@ FROM
 	LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_Product] PROD ON LA.[lapProduct] = PROD.[proCode]
     LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_ProductCategory] PCAT ON PROD.[proProductCategory] = PCAT.[pctCode]
 	LEFT JOIN IDTP_Report.[dbo].[tbl_Conf_Source] SRC ON LA.[lapSource] = SRC.[srcCode]
-WHERE
-    CHG.[chrCode] IS NOT NULL
-		AND LA.lapLLID IN (
-    '1133523',
-    '1135324',
-    '1131242',
-    '1131222',
-    '357781',
-    '372209',
-    '361993',
-    '400726',
-    '436532',
-    '433297',
-    '438190',
-    '443826',
-    '444794'
-);
+
+	WHERE 
+		LA.lapLLID='1131816'
 
 	--	select * from [LamsChargesTemp] where llid='1019555'
 
