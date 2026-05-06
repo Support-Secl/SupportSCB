@@ -86,5 +86,5 @@ FROM
             ORDER BY [lcnCode]
         )
 WHERE
-    LA.[lapLLID] = '1019555'   -- <--- change or remove as needed
+    LA.[lapLLID] = '1019555'   --- <--- change or remove as needed
     AND AP.[aplCode] IS NOT NULL;
