@@ -161,7 +161,7 @@ UPDATE c SET
         WHEN L.[lonReferralCode] = 'DEBT CONSOLI' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'HEME CREDIT' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'HOM FINANCE' THEN 'Saadiq Home Credit'
-        WHEN L.[lonReferralCode] = 'HOME   CREDIT' THEN 'Home Credit'
+        WHEN L.[lonReferralCode] = 'HOMEÂ  Â CREDIT' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'HOME CREDIT (CONVERSTION)' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'HOME CREDIT (PWID REF: 1139655)' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'HOME CREDIT (RM)' THEN 'Home Credit'
@@ -253,7 +253,7 @@ UPDATE c SET
         WHEN L.[lonReferralCode] = 'REGISTERD(SD)' THEN 'Home Loan SD'
         WHEN L.[lonReferralCode] = 'REGISTERED' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'RGM' THEN 'Home Credit'
-        WHEN L.[lonReferralCode] = 'SaadiqOne   home credit' THEN 'Home Credit'
+        WHEN L.[lonReferralCode] = 'SaadiqOneÂ  Â home credit' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'SaadiqOne HOME CREDIT' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'SD DISBURSED' THEN 'Home Loan SD'
         WHEN L.[lonReferralCode] = 'SD(N)' THEN 'Home Loan SD'
@@ -276,9 +276,9 @@ UPDATE c SET
         WHEN L.[lonReferralCode] = 'TAOEOVER RM' THEN 'Takeover Reg'
         WHEN L.[lonReferralCode] = 'TPA/SD' THEN 'Home Loan TPA'
         WHEN L.[lonReferralCode] = 'CONVERTED' THEN 'Conversion'
-        WHEN L.[lonReferralCode] = 'HOME   CREDIT TO' THEN 'Takeover Reg'
+        WHEN L.[lonReferralCode] = 'HOMEÂ  Â CREDIT TO' THEN 'Takeover Reg'
         WHEN L.[lonReferralCode] = 'HOME CREDIT (ref:1149574)' THEN 'Home Credit'
-        WHEN L.[lonReferralCode] = 'HOME CREDIT referral  pwid-1446314' THEN 'Home Credit'
+        WHEN L.[lonReferralCode] = 'HOME CREDIT referralÂ  pwid-1446314' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'HOME CREDIT RM STAFFREF PWID-1285829' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'HOME CREDIT RM(1188879)' THEN 'Home Credit'
         WHEN L.[lonReferralCode] = 'HOME CREDIT STAFF REFERRAL PWID-1446314' THEN 'Home Credit'
@@ -338,3 +338,60 @@ WHERE
  --        OR dis.disType = 'Simultaneous'
  --        OR dis.disType LIKE '%Takeover%'
  --        OR dis.disType LIKE '%SD%')  
+
+
+
+INSERT INTO UploadFileNames([fileName],[alias],[extention],[codeName],[userType],[makerRole],[checkerRole],[operationName],[isNeed],[importantFor],[prioritySeq],[createdOn],[createdBy],[editedOn],[editedBy],[reqApproval],[frequency],[sysType],[newFileName],[oid],[jsonConfigName])VALUES('securityRB.xlsx','SECURITY','xlsx','ImpCdbsCibSecurityImf','consumer','Consumer-Maker','Consumer-Checker','cdbsImfSecurity','1',NULL,'0','Oct 29 2016 12:00AM','admin',NULL,NULL,'1','M','MANUAL_CORE','securityRB.XLSX','BE856B3A-EFD5-4A88-987F-2D75ED235EC8','CDBS_SECURITY_IMF.json')
+
+
+
+
+
+
+
+CREATE TABLE [dbo].[ImpCdbsCibSecurityImf](
+
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+
+	[customerNo] [varchar](50) NULL,
+
+	[accountNo] [varchar](20) NULL,
+
+	[securityValue] [float] NULL,
+
+	[month] [int] NULL,
+
+	[year] [int] NULL,
+
+	[status] [int] NOT NULL,
+
+	[createdOn] [datetime] NULL,
+
+	[createdBy] [varchar](32) NULL,
+
+	[makerRemarks] [varchar](max) NULL,
+
+	[checkedOn] [datetime] NULL,
+
+	[checkedBy] [varchar](32) NULL,
+
+	[checkerRemarks] [varchar](max) NULL,
+
+	[ouName] [varchar](20) NULL,
+
+	[importDate] [datetime] NULL,
+
+ CONSTRAINT [pk_ImpCdbsCibSecurityImf] PRIMARY KEY CLUSTERED 
+
+(
+
+	[id] ASC
+
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+GO
+
+
+
